@@ -32,6 +32,7 @@
       overflow: hidden;
       width: 100vw;
       height: 100vh;
+      height: 100dvh;
     }
 
     /* 音と連動するインタラクティブ背景ドットキャンバス */
@@ -59,26 +60,29 @@
     .hud {
       position: fixed;
       inset: 0;
+      width: 100%;
       z-index: 10;
       pointer-events: none;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 26px 34px;
+      padding: 24px 32px;
+      overflow: hidden;
     }
 
     header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      gap: 16px;
+      gap: 12px;
       flex-wrap: wrap;
+      width: 100%;
     }
 
     .brand {
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 4px;
     }
 
     .brand-tag {
@@ -97,6 +101,7 @@
       border-radius: 50%;
       background-color: var(--nothing-red);
       box-shadow: 0 0 10px var(--nothing-red);
+      flex-shrink: 0;
     }
 
     .brand-title {
@@ -118,7 +123,7 @@
       pointer-events: auto;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
       background: rgba(20, 22, 26, 0.88);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
@@ -126,6 +131,7 @@
       padding: 5px;
       border-radius: 999px;
       box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+      max-width: 100%;
     }
 
     .tab-btn {
@@ -141,6 +147,7 @@
       display: flex;
       align-items: center;
       gap: 6px;
+      white-space: nowrap;
     }
 
     .tab-btn:hover {
@@ -202,24 +209,43 @@
       box-shadow: 0 0 8px var(--nothing-red);
     }
 
+    /* 詳細パネル用背景オーバーレイ（外側タップで閉じる用） */
+    .detail-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.35);
+      z-index: 25;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    body.detail-open .detail-backdrop {
+      pointer-events: auto;
+      opacity: 1;
+    }
+
     /* 駄菓子詳細パネル */
     .detail-panel {
       position: fixed;
-      right: 34px;
-      top: 86px;
-      width: 320px;
-      background: rgba(16, 18, 22, 0.9);
+      right: 32px;
+      top: 84px;
+      width: 330px;
+      max-height: calc(100dvh - 180px);
+      overflow-y: auto;
+      background: rgba(16, 18, 22, 0.95);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      border: 1px dashed rgba(255, 255, 255, 0.26);
+      border: 1px dashed rgba(255, 255, 255, 0.28);
       border-radius: 14px;
-      padding: 20px;
+      padding: 18px 20px;
       pointer-events: auto;
       opacity: 0;
       transform: translateY(-8px);
       visibility: hidden;
-      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.7);
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.78);
+      z-index: 30;
     }
 
     body.detail-open .detail-panel {
@@ -232,11 +258,30 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 8px;
       font-family: 'Silkscreen', monospace;
       font-size: 11px;
       color: var(--nothing-red);
       margin-bottom: 14px;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.06em;
+    }
+
+    .detail-close-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: #fff;
+      font-family: 'Silkscreen', monospace;
+      font-size: 10px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      flex-shrink: 0;
+    }
+
+    .detail-close-btn:hover {
+      background: var(--nothing-red);
+      border-color: var(--nothing-red);
     }
 
     .detail-block {
@@ -309,22 +354,25 @@
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      gap: 16px;
+      gap: 14px;
       flex-wrap: wrap;
+      width: 100%;
     }
 
     .footer-left {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 5px;
       max-width: 480px;
+      width: 100%;
     }
 
     .telemetry {
       font-size: 11px;
       color: var(--text-dim);
-      line-height: 1.7;
+      line-height: 1.6;
       letter-spacing: 0.04em;
+      word-break: break-word;
     }
 
     .telemetry span {
@@ -337,6 +385,7 @@
       font-family: 'Noto Sans JP', sans-serif;
       line-height: 1.45;
       letter-spacing: 0.02em;
+      word-break: break-word;
     }
 
     .console-dock {
@@ -344,19 +393,20 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
-      background: rgba(20, 22, 26, 0.88);
+      background: rgba(20, 22, 26, 0.9);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border: 1px solid rgba(255, 255, 255, 0.2);
       padding: 14px 16px;
       border-radius: 20px;
       box-shadow: 0 24px 50px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      max-width: 100%;
     }
 
     .console-row {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       flex-wrap: wrap;
     }
 
@@ -365,7 +415,7 @@
       font-size: 10px;
       color: var(--text-dim);
       letter-spacing: 0.08em;
-      margin-right: 4px;
+      margin-right: 2px;
     }
 
     /* 物理キースイッチ風ボタン */
@@ -377,14 +427,16 @@
       color: var(--text-main);
       font-family: 'Silkscreen', monospace;
       font-size: 11px;
-      padding: 10px 14px;
+      padding: 9px 13px;
       border-radius: 10px;
       cursor: pointer;
       letter-spacing: 0.04em;
       transition: transform 0.06s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.06s ease, background 0.15s;
       display: inline-flex;
       align-items: center;
-      gap: 7px;
+      justify-content: center;
+      gap: 6px;
+      white-space: nowrap;
     }
 
     .mech-btn:hover {
@@ -411,12 +463,13 @@
 
     .note-keys {
       display: flex;
-      gap: 6px;
+      gap: 5px;
+      flex-wrap: wrap;
     }
 
     .note-key {
       width: 38px;
-      height: 44px;
+      height: 42px;
       padding: 0;
       flex-direction: column;
       justify-content: center;
@@ -433,12 +486,20 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .seq-controls-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .seq-steps {
       display: flex;
-      gap: 5px;
+      gap: 4px;
+      flex-wrap: wrap;
     }
 
     .step-pad {
@@ -463,10 +524,97 @@
     .step-pad[data-mode="3"] { background: rgba(255, 255, 255, 0.1); border-style: dashed; border-color: rgba(255, 255, 255, 0.55); color: #ddd; }
     .step-pad.current { outline: 2px solid var(--nothing-red); outline-offset: 1px; box-shadow: 0 0 12px var(--nothing-red-glow); }
 
+    /* スマホ・狭幅画面向けレスポンシブ調整 */
     @media (max-width: 860px) {
-      .hud { padding: 16px; }
-      footer { flex-direction: column; align-items: stretch; }
-      .detail-panel { left: 16px; right: 16px; width: auto; top: 130px; }
+      .hud {
+        padding: 12px 12px 14px;
+      }
+      .brand-tag {
+        font-size: 9px;
+        letter-spacing: 0.12em;
+      }
+      .brand-title {
+        font-size: 19px;
+      }
+      .brand-meta {
+        font-size: 9px;
+      }
+      .archive-switcher {
+        width: 100%;
+        justify-content: space-between;
+        padding: 4px;
+      }
+      .tab-btn {
+        font-size: 9px;
+        padding: 6px 6px;
+        flex: 1;
+        justify-content: center;
+        gap: 4px;
+      }
+      .tactile-pill {
+        font-size: 9px;
+        padding: 6px 12px;
+      }
+      .detail-panel {
+        left: 12px;
+        right: 12px;
+        width: auto;
+        top: 16px;
+        max-height: calc(100dvh - 32px);
+        padding: 16px;
+      }
+      footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+      .telemetry {
+        font-size: 9px;
+        line-height: 1.45;
+      }
+      .disclaimer-line {
+        font-size: 8.5px;
+        line-height: 1.35;
+      }
+      .console-dock {
+        width: 100%;
+        padding: 10px 10px;
+        border-radius: 16px;
+        gap: 8px;
+      }
+      .console-row {
+        gap: 5px;
+      }
+      .console-label {
+        font-size: 9px;
+      }
+      .mech-btn {
+        font-size: 9px;
+        padding: 7px 9px;
+        border-radius: 8px;
+      }
+      .note-key {
+        width: 32px;
+        height: 36px;
+      }
+      .sequencer-row {
+        padding-top: 8px;
+        gap: 6px;
+      }
+      .seq-controls-head {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .seq-steps {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .step-pad {
+        flex: 1;
+        max-width: 34px;
+        height: 26px;
+        font-size: 8px;
+      }
     }
   </style>
   <script type="importmap">
@@ -481,6 +629,12 @@
 <body>
   <canvas id="bg-canvas"></canvas>
   <div id="webgl-container"></div>
+
+  <!-- 外側タップで詳細パネルを閉じるためのバックドロップ -->
+  <div class="detail-backdrop" id="detailBackdrop"></div>
+
+  <!-- 選択中の駄菓子詳細パネル -->
+  <aside class="detail-panel" id="detailPanel"></aside>
 
   <div class="hud">
     <header>
@@ -514,9 +668,6 @@
       </div>
     </header>
 
-    <!-- 選択中の駄菓子詳細パネル -->
-    <aside class="detail-panel" id="detailPanel"></aside>
-
     <footer>
       <div class="footer-left">
         <div class="telemetry" id="telemetryText">
@@ -531,12 +682,14 @@
       <div class="console-dock">
         <div class="console-row" id="dynamicControls"></div>
         <div class="sequencer-row">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <button id="playSeqBtn" class="mech-btn red-key" style="padding: 8px 14px;">▶ LOOP</button>
-            <span class="console-label" id="seqModeLabel">8-STEP BEAT</span>
+          <div class="seq-controls-head">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <button id="playSeqBtn" class="mech-btn red-key" style="padding: 7px 12px;">▶ LOOP</button>
+              <span class="console-label" id="seqModeLabel">8-STEP BEAT</span>
+            </div>
+            <button id="clearSeqBtn" class="mech-btn" style="padding: 7px 10px; font-size:10px;">CLR</button>
           </div>
           <div class="seq-steps" id="seqSteps"></div>
-          <button id="clearSeqBtn" class="mech-btn" style="padding: 8px 10px; font-size:10px;">CLR</button>
         </div>
       </div>
     </footer>
@@ -552,7 +705,7 @@
     const bgCanvas = document.getElementById('bg-canvas');
     const bgCtx = bgCanvas.getContext('2d');
     let bgW = 0, bgH = 0, bgDpr = 1;
-    const bgEffects = []; // { type, progress, speed, yRatio, cx, cy, colorRed, intensity }
+    const bgEffects = [];
 
     function resizeBgCanvas() {
       bgDpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -565,10 +718,9 @@
     resizeBgCanvas();
     window.addEventListener('resize', resizeBgCanvas);
 
-    // 音のタイプや高さに応じた背景アクションを発火
     function triggerBgAction(type, opts = {}) {
       bgEffects.push({
-        type, // 'wave' | 'ripple' | 'flash' | 'sparkle'
+        type,
         progress: 0,
         speed: opts.speed || 0.032,
         yRatio: opts.yRatio !== undefined ? opts.yRatio : 0.5,
@@ -583,14 +735,12 @@
       bgCtx.fillStyle = '#0d0e11';
       bgCtx.fillRect(0, 0, bgW, bgH);
 
-      // 中央のほのかなスタジオライト
       const centerGrad = bgCtx.createRadialGradient(bgW * 0.5, bgH * 0.45, 0, bgW * 0.5, bgH * 0.45, Math.max(bgW, bgH) * 0.6);
       centerGrad.addColorStop(0, `rgba(255, 255, 255, ${0.045 + sustainLevel * 0.03})`);
       centerGrad.addColorStop(1, 'rgba(13, 14, 17, 0)');
       bgCtx.fillStyle = centerGrad;
       bgCtx.fillRect(0, 0, bgW, bgH);
 
-      // アクティブなエフェクトを更新
       for (let i = bgEffects.length - 1; i >= 0; i--) {
         bgEffects[i].progress += bgEffects[i].speed;
         if (bgEffects[i].progress >= 1) bgEffects.splice(i, 1);
@@ -612,7 +762,6 @@
           let radius = 1.05;
           let redMix = 0;
 
-          // 持続音（笛の長押しなど）があるときの穏やかな横ウェーブ
           if (sustainLevel > 0.01) {
             const waveVal = Math.sin(normX * 10 - time * 9 + normY * 3) * 0.5 + 0.5;
             alpha += waveVal * 0.22 * sustainLevel;
@@ -620,14 +769,12 @@
             redMix += Math.max(0, waveVal - 0.65) * 1.4 * sustainLevel;
           }
 
-          // 各ワンショット・エフェクトの合成
           for (let i = 0; i < bgEffects.length; i++) {
             const ef = bgEffects[i];
             const p = ef.progress;
-            const fade = Math.sin(p * Math.PI); // 0 -> 1 -> 0
+            const fade = Math.sin(p * Math.PI);
 
             if (ef.type === 'wave') {
-              // 左から右へ走るウェーブ（音程の高さに応じた縦帯の強調＋横方向スイープ）
               const frontX = -0.15 + p * 1.3;
               const distX = Math.abs(normX - frontX);
               const verticalCurve = Math.sin(normX * Math.PI * 3 - p * 8) * 0.08;
@@ -642,7 +789,6 @@
                 if (ef.redAccent || distX < 0.04) redMix += boost * 0.75;
               }
             } else if (ef.type === 'ripple') {
-              // 中心またはクリック地点から広がる波紋リング
               const dist = Math.hypot(x - ef.cx, y - ef.cy);
               const maxR = Math.max(bgW, bgH) * 0.75;
               const ringR = p * maxR;
@@ -654,7 +800,6 @@
                 if (ef.redAccent) redMix += ringBoost * 0.85;
               }
             } else if (ef.type === 'flash') {
-              // ステップやクランチ音での市松模様／列点滅フラッシュ
               const sweep = Math.abs(normX - p);
               const checker = ((c + r) % 2 === 0) ? 1.0 : 0.45;
               const pulse = fade * checker * (sweep < 0.45 ? 1.2 : 0.5) * ef.intensity;
@@ -662,7 +807,6 @@
               radius += pulse * 0.9;
               if (ef.redAccent && (c % 4 === 0)) redMix += pulse * 0.9;
             } else if (ef.type === 'sparkle') {
-              // ランダムなドットがキラキラ点滅
               const hash = Math.sin(c * 12.9898 + r * 78.233 + Math.floor(p * 12)) * 43758.5453;
               const rand = hash - Math.floor(hash);
               if (rand > 0.78) {
@@ -808,7 +952,6 @@
         const t = this.ctx.currentTime;
         const freq = isLidOpen ? baseFreq * 1.12 : baseFreq;
 
-        // 音程に応じた背景ウェーブを発火（高い音ほど上側を通過）
         const yRatio = Math.max(0.18, Math.min(0.82, 1 - (baseFreq - 1600) / 1800));
         triggerBgAction('wave', { yRatio, speed: 0.036, redAccent: baseFreq >= 2440, intensity: 1.0 });
 
@@ -977,7 +1120,7 @@
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.minDistance = 3.5;
-    controls.maxDistance = 11;
+    controls.maxDistance = 12;
 
     function createCircleDotTexture() {
       const c = document.createElement('canvas');
@@ -1536,8 +1679,26 @@
     };
 
     const detailPanelEl = document.getElementById('detailPanel');
+    const detailBtn = document.getElementById('detailBtn');
+    const detailBackdrop = document.getElementById('detailBackdrop');
     const dynamicControlsEl = document.getElementById('dynamicControls');
     const seqModeLabelEl = document.getElementById('seqModeLabel');
+
+    function setDetailOpen(open) {
+      document.body.classList.toggle('detail-open', open);
+      detailBtn.classList.toggle('is-active', open);
+    }
+
+    detailBtn.addEventListener('click', () => {
+      audio.playSwitchClick(1100);
+      const isOpen = document.body.classList.contains('detail-open');
+      setDetailOpen(!isOpen);
+    });
+
+    detailBackdrop.addEventListener('click', () => {
+      audio.playSwitchClick(900);
+      setDetailOpen(false);
+    });
 
     function renderDetailPanel(itemKey) {
       const d = ARCHIVE_DATA[itemKey];
@@ -1549,8 +1710,8 @@
 
       detailPanelEl.innerHTML = `
         <div class="detail-header">
-          <span>${d.headerTag}</span>
-          <span>${d.era}</span>
+          <span>${d.headerTag} (${d.era})</span>
+          <button type="button" class="detail-close-btn" id="detailCloseBtn">✕ CLOSE</button>
         </div>
         <div class="detail-block">
           <div class="detail-k">Product Name / Motif</div>
@@ -1577,6 +1738,11 @@
           </div>
         </div>
       `;
+
+      document.getElementById('detailCloseBtn').addEventListener('click', () => {
+        audio.playSwitchClick(900);
+        setDetailOpen(false);
+      });
     }
 
     let activeKeyMap = new Map();
@@ -1684,7 +1850,7 @@
           <span class="console-label">ACTIONS</span>
           <button id="peelLidBtn" class="mech-btn red-key" data-key="KeyA">PEEL LID [A]</button>
           <button id="crunchBtn" class="mech-btn" data-key="KeyS">CRUNCH [S]</button>
-          <button id="shakeCupBtn" class="mech-btn" data-key="KeyD">SHAKE CUP [D]</button>
+          <button id="shakeCupBtn" class="mech-btn" data-key="KeyD">SHAKE [D]</button>
           <button id="newLotteryBtn" class="mech-btn" data-key="KeyF">NEW CUP [F]</button>
         `;
 
@@ -1732,7 +1898,6 @@
       audio.playJellyNote(cell.freq);
       state.pulseBump = 0.025;
 
-      // 背景に横ウェーブ＋波紋を同時発生
       const yRatio = Math.max(0.2, Math.min(0.8, 0.8 - (idx / 12) * 0.6));
       triggerBgAction('wave', { yRatio, speed: 0.038, redAccent: idx % 3 === 0, intensity: 0.95 });
       triggerBgAction('ripple', {
@@ -1781,14 +1946,17 @@
         b.classList.toggle('active', b.dataset.item === itemKey);
       });
 
+      const isMobile = window.innerWidth <= 860;
+      const distMult = isMobile ? 1.28 : 1.0;
+
       if (itemKey === 'sakuranbo') {
-        camera.position.set(0.8, 0.35, 6.0);
+        camera.position.set(0.8 * distMult, 0.35 * distMult, 6.0 * distMult);
       } else if (itemKey === 'yattermen') {
-        camera.position.set(2.4, 2.8, 5.6);
+        camera.position.set(2.4 * distMult, 2.8 * distMult, 5.6 * distMult);
       } else {
-        camera.position.set(3.2, 2.0, 6.4);
+        camera.position.set(3.2 * distMult, 2.0 * distMult, 6.4 * distMult);
       }
-      controls.target.set(0, 0.15, 0);
+      controls.target.set(0, isMobile ? -0.1 : 0.15, 0);
 
       renderDetailPanel(itemKey);
       buildDynamicControls(itemKey);
@@ -1798,14 +1966,11 @@
       btn.addEventListener('click', () => switchArchiveItem(btn.dataset.item));
     });
 
-    const detailBtn = document.getElementById('detailBtn');
-    detailBtn.addEventListener('click', () => {
-      audio.playSwitchClick(1100);
-      const open = document.body.classList.toggle('detail-open');
-      detailBtn.classList.toggle('is-active', open);
-    });
-
     window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.body.classList.contains('detail-open')) {
+        setDetailOpen(false);
+        return;
+      }
       if (e.repeat) return;
       const handler = activeKeyMap.get(e.code);
       if (handler && handler.down) handler.down();
@@ -2019,7 +2184,6 @@
       requestAnimationFrame(animate);
       const time = clock.getElapsedTime();
 
-      // 持続音（笛など）の強度を滑らかに補間して背景ドットへ反映
       const targetSustain = audio.activeVoices.size > 0 ? 1.0 : 0.0;
       smoothSustain += (targetSustain - smoothSustain) * 0.14;
       renderBgDots(time, smoothSustain);
