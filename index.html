@@ -34,15 +34,12 @@
       height: 100vh;
     }
 
-    /* 背景のドットグリッド＆ほんのりスタジオ光 */
-    .bg-dots {
+    /* 音と連動するインタラクティブ背景ドットキャンバス */
+    #bg-canvas {
       position: fixed;
       inset: 0;
-      background-color: var(--bg);
-      background-image:
-        radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.05) 0%, transparent 60%),
-        radial-gradient(rgba(255, 255, 255, 0.11) 1px, transparent 1px);
-      background-size: 100% 100%, 26px 26px;
+      width: 100vw;
+      height: 100vh;
       pointer-events: none;
       z-index: 0;
     }
@@ -482,7 +479,7 @@
   </script>
 </head>
 <body>
-  <div class="bg-dots"></div>
+  <canvas id="bg-canvas"></canvas>
   <div id="webgl-container"></div>
 
   <div class="hud">
@@ -527,7 +524,7 @@
           STATUS: <span id="statusVal">CAP LOCKED</span> &nbsp;//&nbsp; SEQ: <span id="seqStatus">STOPPED</span>
         </div>
         <div class="disclaimer-line">
-          ※本作品は個人の学習を目的とした非商用のファンアート（オマージュ作品）であり、実在のメーカー・企業様とは一切関係ありません。
+          ※本作品はポートフォリオ制作を目的とした非商用のファンアート（オマージュ作品）であり、実在のメーカー・企業様とは一切関係ありません。
         </div>
       </div>
 
@@ -548,6 +545,154 @@
   <script type="module">
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    /**
+     * 0. オーディオ連動・背景ドットマトリクス（ウェーブ・波紋・グリッド点滅）
+     */
+    const bgCanvas = document.getElementById('bg-canvas');
+    const bgCtx = bgCanvas.getContext('2d');
+    let bgW = 0, bgH = 0, bgDpr = 1;
+    const bgEffects = []; // { type, progress, speed, yRatio, cx, cy, colorRed, intensity }
+
+    function resizeBgCanvas() {
+      bgDpr = Math.min(window.devicePixelRatio || 1, 2);
+      bgW = window.innerWidth;
+      bgH = window.innerHeight;
+      bgCanvas.width = bgW * bgDpr;
+      bgCanvas.height = bgH * bgDpr;
+      bgCtx.setTransform(bgDpr, 0, 0, bgDpr, 0, 0);
+    }
+    resizeBgCanvas();
+    window.addEventListener('resize', resizeBgCanvas);
+
+    // 音のタイプや高さに応じた背景アクションを発火
+    function triggerBgAction(type, opts = {}) {
+      bgEffects.push({
+        type, // 'wave' | 'ripple' | 'flash' | 'sparkle'
+        progress: 0,
+        speed: opts.speed || 0.032,
+        yRatio: opts.yRatio !== undefined ? opts.yRatio : 0.5,
+        cx: opts.cx !== undefined ? opts.cx : bgW * 0.5,
+        cy: opts.cy !== undefined ? opts.cy : bgH * 0.45,
+        redAccent: Boolean(opts.redAccent),
+        intensity: opts.intensity || 1.0
+      });
+    }
+
+    function renderBgDots(time, sustainLevel) {
+      bgCtx.fillStyle = '#0d0e11';
+      bgCtx.fillRect(0, 0, bgW, bgH);
+
+      // 中央のほのかなスタジオライト
+      const centerGrad = bgCtx.createRadialGradient(bgW * 0.5, bgH * 0.45, 0, bgW * 0.5, bgH * 0.45, Math.max(bgW, bgH) * 0.6);
+      centerGrad.addColorStop(0, `rgba(255, 255, 255, ${0.045 + sustainLevel * 0.03})`);
+      centerGrad.addColorStop(1, 'rgba(13, 14, 17, 0)');
+      bgCtx.fillStyle = centerGrad;
+      bgCtx.fillRect(0, 0, bgW, bgH);
+
+      // アクティブなエフェクトを更新
+      for (let i = bgEffects.length - 1; i >= 0; i--) {
+        bgEffects[i].progress += bgEffects[i].speed;
+        if (bgEffects[i].progress >= 1) bgEffects.splice(i, 1);
+      }
+
+      const spacing = 26;
+      const cols = Math.ceil(bgW / spacing);
+      const rows = Math.ceil(bgH / spacing);
+
+      for (let r = 0; r <= rows; r++) {
+        const y = r * spacing;
+        const normY = y / bgH;
+
+        for (let c = 0; c <= cols; c++) {
+          const x = c * spacing;
+          const normX = x / bgW;
+
+          let alpha = 0.11;
+          let radius = 1.05;
+          let redMix = 0;
+
+          // 持続音（笛の長押しなど）があるときの穏やかな横ウェーブ
+          if (sustainLevel > 0.01) {
+            const waveVal = Math.sin(normX * 10 - time * 9 + normY * 3) * 0.5 + 0.5;
+            alpha += waveVal * 0.22 * sustainLevel;
+            radius += waveVal * 0.7 * sustainLevel;
+            redMix += Math.max(0, waveVal - 0.65) * 1.4 * sustainLevel;
+          }
+
+          // 各ワンショット・エフェクトの合成
+          for (let i = 0; i < bgEffects.length; i++) {
+            const ef = bgEffects[i];
+            const p = ef.progress;
+            const fade = Math.sin(p * Math.PI); // 0 -> 1 -> 0
+
+            if (ef.type === 'wave') {
+              // 左から右へ走るウェーブ（音程の高さに応じた縦帯の強調＋横方向スイープ）
+              const frontX = -0.15 + p * 1.3;
+              const distX = Math.abs(normX - frontX);
+              const verticalCurve = Math.sin(normX * Math.PI * 3 - p * 8) * 0.08;
+              const distY = Math.abs(normY - (ef.yRatio + verticalCurve));
+
+              if (distX < 0.16) {
+                const band = (1 - distX / 0.16) * (1 - p * 0.35);
+                const pitchFocus = Math.max(0.25, 1 - distY * 1.8);
+                const boost = band * pitchFocus * ef.intensity;
+                alpha += boost * 0.55;
+                radius += boost * 1.45;
+                if (ef.redAccent || distX < 0.04) redMix += boost * 0.75;
+              }
+            } else if (ef.type === 'ripple') {
+              // 中心またはクリック地点から広がる波紋リング
+              const dist = Math.hypot(x - ef.cx, y - ef.cy);
+              const maxR = Math.max(bgW, bgH) * 0.75;
+              const ringR = p * maxR;
+              const diff = Math.abs(dist - ringR);
+              if (diff < 75) {
+                const ringBoost = (1 - diff / 75) * (1 - p) * ef.intensity;
+                alpha += ringBoost * 0.6;
+                radius += ringBoost * 1.6;
+                if (ef.redAccent) redMix += ringBoost * 0.85;
+              }
+            } else if (ef.type === 'flash') {
+              // ステップやクランチ音での市松模様／列点滅フラッシュ
+              const sweep = Math.abs(normX - p);
+              const checker = ((c + r) % 2 === 0) ? 1.0 : 0.45;
+              const pulse = fade * checker * (sweep < 0.45 ? 1.2 : 0.5) * ef.intensity;
+              alpha += pulse * 0.36;
+              radius += pulse * 0.9;
+              if (ef.redAccent && (c % 4 === 0)) redMix += pulse * 0.9;
+            } else if (ef.type === 'sparkle') {
+              // ランダムなドットがキラキラ点滅
+              const hash = Math.sin(c * 12.9898 + r * 78.233 + Math.floor(p * 12)) * 43758.5453;
+              const rand = hash - Math.floor(hash);
+              if (rand > 0.78) {
+                const sp = ((rand - 0.78) / 0.22) * fade * ef.intensity;
+                alpha += sp * 0.65;
+                radius += sp * 1.5;
+                if (rand > 0.92) redMix += sp;
+              }
+            }
+          }
+
+          alpha = Math.min(0.95, alpha);
+          radius = Math.min(3.0, radius);
+          redMix = Math.min(1.0, redMix);
+
+          if (redMix > 0.05) {
+            const rr = Math.round(255 * (1 - redMix) + 224 * redMix);
+            const gg = Math.round(255 * (1 - redMix) + 30 * redMix);
+            const bb = Math.round(255 * (1 - redMix) + 38 * redMix);
+            bgCtx.fillStyle = `rgba(${rr}, ${gg}, ${bb}, ${alpha.toFixed(3)})`;
+          } else {
+            bgCtx.fillStyle = `rgba(255, 255, 255, ${alpha.toFixed(3)})`;
+          }
+
+          bgCtx.beginPath();
+          bgCtx.arc(x, y, radius, 0, Math.PI * 2);
+          bgCtx.fill();
+        }
+      }
+    }
 
     /**
      * 1. 各駄菓子の詳細データ（ITEM DETAILSパネル用）
@@ -662,6 +807,10 @@
         if (this.activeVoices.has(id)) return;
         const t = this.ctx.currentTime;
         const freq = isLidOpen ? baseFreq * 1.12 : baseFreq;
+
+        // 音程に応じた背景ウェーブを発火（高い音ほど上側を通過）
+        const yRatio = Math.max(0.18, Math.min(0.82, 1 - (baseFreq - 1600) / 1800));
+        triggerBgAction('wave', { yRatio, speed: 0.036, redAccent: baseFreq >= 2440, intensity: 1.0 });
 
         const osc = this.ctx.createOscillator();
         osc.type = 'square';
@@ -800,7 +949,10 @@
         this.init();
         const notes = [1046.5, 1318.5, 1568.0, 2093.0];
         notes.forEach((f, idx) => {
-          setTimeout(() => this.playJellyNote(f), idx * 65);
+          setTimeout(() => {
+            this.playJellyNote(f);
+            triggerBgAction('wave', { yRatio: 0.7 - idx * 0.15, speed: 0.045, redAccent: true, intensity: 1.2 });
+          }, idx * 65);
         });
       }
     }
@@ -1472,11 +1624,13 @@
           const open = state.targetLidSlide < 0.33;
           state.targetLidSlide = open ? 0.66 : 0;
           audio.playSwitchClick(open ? 1500 : 950);
+          triggerBgAction('wave', { yRatio: 0.25, speed: 0.05, redAccent: open, intensity: 0.7 });
         });
 
         const tiltBtn = document.getElementById('tiltBtn');
         tiltBtn.addEventListener('pointerdown', () => {
           audio.playSwitchClick(900);
+          triggerBgAction('ripple', { speed: 0.03, intensity: 0.8 });
           state.isTilting = true;
           tiltBtn.classList.add('pressed');
           if (state.targetLidSlide < 0.33) state.targetLidSlide = 0.66;
@@ -1487,6 +1641,7 @@
 
         document.getElementById('resetBtn').addEventListener('click', () => {
           audio.playSwitchClick(1300);
+          triggerBgAction('sparkle', { speed: 0.035, intensity: 1.0 });
           initRamuneTablets();
         });
 
@@ -1547,16 +1702,20 @@
         bindBtn('peelLidBtn', toggleYatterLid);
         bindBtn('crunchBtn', () => {
           audio.playNoodleCrunch();
+          triggerBgAction('sparkle', { speed: 0.045, redAccent: true, intensity: 1.2 });
+          triggerBgAction('flash', { speed: 0.055, intensity: 0.8 });
           state.pulseBump = 0.045;
           document.getElementById('statusVal').textContent = 'CRUNCHY!';
         });
         bindBtn('shakeCupBtn', () => {
           audio.playTabletPerc();
+          triggerBgAction('wave', { yRatio: 0.5, speed: 0.048, intensity: 0.95 });
           state.yShakePower = 1.0;
           document.getElementById('statusVal').textContent = 'SHAKING CUP';
         });
         bindBtn('newLotteryBtn', () => {
           audio.playSwitchClick(1350);
+          triggerBgAction('ripple', { speed: 0.038, intensity: 0.9 });
           state.yLidOpen = false;
           drawNewLottery();
           document.getElementById('statusVal').textContent = 'NEW SEALED CUP';
@@ -1564,7 +1723,7 @@
       }
     }
 
-    function triggerJellyPick(idx) {
+    function triggerJellyPick(idx, screenPos = null) {
       const cell = jellyCells[idx];
       if (!cell) return;
       cell.lift = 0.24;
@@ -1572,6 +1731,18 @@
       state.tpReturnTimer = 28;
       audio.playJellyNote(cell.freq);
       state.pulseBump = 0.025;
+
+      // 背景に横ウェーブ＋波紋を同時発生
+      const yRatio = Math.max(0.2, Math.min(0.8, 0.8 - (idx / 12) * 0.6));
+      triggerBgAction('wave', { yRatio, speed: 0.038, redAccent: idx % 3 === 0, intensity: 0.95 });
+      triggerBgAction('ripple', {
+        cx: screenPos ? screenPos.x : bgW * 0.5,
+        cy: screenPos ? screenPos.y : bgH * 0.45,
+        speed: 0.032,
+        redAccent: idx % 4 === 0,
+        intensity: 0.85
+      });
+
       const st = document.getElementById('statusVal');
       if (st) st.textContent = `CELL #${String(idx + 1).padStart(2, '0')} (${Math.round(cell.freq)}Hz)`;
     }
@@ -1585,6 +1756,7 @@
     function toggleYatterLid() {
       state.yLidOpen = !state.yLidOpen;
       audio.playFoilPeel(state.yLidOpen);
+      triggerBgAction('flash', { speed: 0.04, redAccent: state.yLidOpen, intensity: 1.0 });
       const st = document.getElementById('statusVal');
       if (state.yLidOpen) {
         if (currentLotteryText.includes('当たり')) {
@@ -1599,6 +1771,7 @@
     function switchArchiveItem(itemKey) {
       state.currentItem = itemKey;
       audio.playSwitchClick(1250);
+      triggerBgAction('wave', { yRatio: 0.48, speed: 0.045, redAccent: true, intensity: 0.85 });
 
       ramuneGroup.visible = itemKey === 'ramune';
       sakuranboGroup.visible = itemKey === 'sakuranbo';
@@ -1668,7 +1841,7 @@
       } else if (state.currentItem === 'sakuranbo') {
         const hits = raycaster.intersectObjects(jellyHitMeshes);
         if (hits.length > 0) {
-          triggerJellyPick(hits[0].object.userData.jellyIdx);
+          triggerJellyPick(hits[0].object.userData.jellyIdx, { x: e.clientX, y: e.clientY });
         }
       } else if (state.currentItem === 'yattermen') {
         if (raycaster.intersectObject(yLidHit).length > 0) {
@@ -1682,8 +1855,14 @@
         const dx = e.clientX - state.dragStartX;
         if (Math.abs(dx) > 4) state.moved = true;
         const next = Math.max(0, Math.min(0.66, state.initialSlide + dx * 0.0045));
-        if (state.targetLidSlide < 0.33 && next >= 0.33) audio.playSwitchClick(1500);
-        if (state.targetLidSlide >= 0.33 && next < 0.33) audio.playSwitchClick(950);
+        if (state.targetLidSlide < 0.33 && next >= 0.33) {
+          audio.playSwitchClick(1500);
+          triggerBgAction('wave', { yRatio: 0.25, speed: 0.05, redAccent: true, intensity: 0.7 });
+        }
+        if (state.targetLidSlide >= 0.33 && next < 0.33) {
+          audio.playSwitchClick(950);
+          triggerBgAction('wave', { yRatio: 0.25, speed: 0.05, intensity: 0.6 });
+        }
         state.targetLidSlide = next;
         return;
       }
@@ -1707,6 +1886,7 @@
           const open = state.targetLidSlide < 0.33;
           state.targetLidSlide = open ? 0.66 : 0;
           audio.playSwitchClick(open ? 1500 : 950);
+          triggerBgAction('wave', { yRatio: 0.25, speed: 0.05, redAccent: open, intensity: 0.7 });
         } else {
           state.targetLidSlide = state.targetLidSlide >= 0.33 ? 0.66 : 0;
         }
@@ -1734,6 +1914,7 @@
         pad.dataset.mode = String(nextMode);
         pad.textContent = stepLabels[nextMode];
         audio.playSwitchClick(1000 + nextMode * 200);
+        triggerBgAction('flash', { speed: 0.06, redAccent: nextMode === 1, intensity: 0.5 });
       });
       seqContainer.appendChild(pad);
       stepPads.push(pad);
@@ -1749,17 +1930,42 @@
       const mode = seqPattern[currentStep];
 
       if (state.currentItem === 'ramune') {
-        if (mode === 1) { audio.triggerStepWhistle(3136, state.lidSlide > 0.3); spawnSoundRing(); state.pulseBump = 0.045; }
-        else if (mode === 2) { audio.triggerStepWhistle(2440, state.lidSlide > 0.3); spawnSoundRing(); state.pulseBump = 0.045; }
-        else if (mode === 3) { audio.playTabletPerc(); state.pulseBump = 0.03; rTablets.forEach(t => { t.vy += 0.018; }); }
+        if (mode === 1) {
+          audio.triggerStepWhistle(3136, state.lidSlide > 0.3);
+          spawnSoundRing();
+          state.pulseBump = 0.045;
+        } else if (mode === 2) {
+          audio.triggerStepWhistle(2440, state.lidSlide > 0.3);
+          spawnSoundRing();
+          state.pulseBump = 0.045;
+        } else if (mode === 3) {
+          audio.playTabletPerc();
+          triggerBgAction('flash', { speed: 0.055, intensity: 0.75 });
+          state.pulseBump = 0.03;
+          rTablets.forEach(t => { t.vy += 0.018; });
+        }
       } else if (state.currentItem === 'sakuranbo') {
         if (mode === 1) { triggerJellyPick((currentStep * 2) % 12); }
         else if (mode === 2) { triggerJellyPick(currentStep % 6); }
-        else if (mode === 3) { audio.playSwitchClick(1600); state.pulseBump = 0.025; }
+        else if (mode === 3) {
+          audio.playSwitchClick(1600);
+          triggerBgAction('sparkle', { speed: 0.05, intensity: 0.8 });
+          state.pulseBump = 0.025;
+        }
       } else if (state.currentItem === 'yattermen') {
-        if (mode === 1) { audio.playNoodleCrunch(); state.pulseBump = 0.045; }
-        else if (mode === 2) { audio.playFoilPeel(true); state.pulseBump = 0.035; }
-        else if (mode === 3) { audio.playTabletPerc(); state.yShakePower = 0.6; }
+        if (mode === 1) {
+          audio.playNoodleCrunch();
+          triggerBgAction('sparkle', { speed: 0.05, redAccent: true, intensity: 1.0 });
+          state.pulseBump = 0.045;
+        } else if (mode === 2) {
+          audio.playFoilPeel(true);
+          triggerBgAction('wave', { yRatio: 0.4, speed: 0.048, redAccent: true, intensity: 0.9 });
+          state.pulseBump = 0.035;
+        } else if (mode === 3) {
+          audio.playTabletPerc();
+          triggerBgAction('flash', { speed: 0.055, intensity: 0.8 });
+          state.yShakePower = 0.6;
+        }
       }
 
       currentStep = (currentStep + 1) % 8;
@@ -1787,6 +1993,7 @@
 
     document.getElementById('clearSeqBtn').addEventListener('click', () => {
       audio.playSwitchClick(800);
+      triggerBgAction('flash', { speed: 0.06, intensity: 0.5 });
       for (let i = 0; i < 8; i++) {
         seqPattern[i] = 0;
         stepPads[i].dataset.mode = '0';
@@ -1806,10 +2013,16 @@
      * 8. メインアニメーションループ
      */
     const clock = new THREE.Clock();
+    let smoothSustain = 0;
 
     function animate() {
       requestAnimationFrame(animate);
       const time = clock.getElapsedTime();
+
+      // 持続音（笛など）の強度を滑らかに補間して背景ドットへ反映
+      const targetSustain = audio.activeVoices.size > 0 ? 1.0 : 0.0;
+      smoothSustain += (targetSustain - smoothSustain) * 0.14;
+      renderBgDots(time, smoothSustain);
 
       state.pulseBump *= 0.82;
       worldStage.position.y = 0.25 + Math.sin(time * 1.2) * 0.03 + state.pulseBump;
@@ -1860,6 +2073,7 @@
               ramuneGroup.remove(t.mesh);
               rTablets.splice(i, 1);
               audio.playTabletPerc();
+              triggerBgAction('sparkle', { speed: 0.05, intensity: 0.85 });
               continue;
             } else {
               t.y = halfH - t.r; t.vy *= -0.1;
